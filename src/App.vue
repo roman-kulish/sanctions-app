@@ -4,7 +4,7 @@
       <fwb-tabs v-model="activeTab" variant="underline" class="p-5">
         <fwb-tab name="search" title="Search">
           <form @submit.prevent="search">
-            <fwb-input v-model="searchQuery" size="lg">
+            <fwb-input v-model="searchQuery" size="lg" maxlength="100">
               <template #prefix>
                 <svg aria-hidden="true" class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none"
                   stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -35,7 +35,7 @@
         </fwb-tab>
         <fwb-tab name="smartSearch" title="SmartSearch">
           <form @submit.prevent="smartSearch">
-            <fwb-textarea v-model="smartSearchQuery" :rows="10" custom label="">
+            <fwb-textarea v-model="smartSearchQuery" :rows="10" custom label="" maxlength="1000">
               <template #footer>
                 <div class="flex items-center justify-between">
                   <fwb-button :disabled="isLoading">
@@ -104,6 +104,12 @@
         No results.
       </fwb-alert>
     </section>
+
+    <section class="w-full max-w-screen-md mx-auto mt-8" v-if="error">
+      <fwb-alert class="border-t-4 rounded-none" icon type="danger">
+        Oops! Error... Try again!
+      </fwb-alert>
+    </section>
   </div>
 </template>
 
@@ -132,7 +138,7 @@ const client = axios.create({
   timeout: 30000
 })
 
-const activeTab = ref('search')
+const activeTab = ref('smartSearch')
 
 const searchQuery = ref('')
 const searchType = ref('all')
@@ -146,6 +152,7 @@ const smartSearchData = ref([])
 
 const noResults = ref(false)
 const isLoading = ref(false)
+const error = ref(false)
 
 const search = async () => {
   const q = searchQuery.value.trim()
@@ -157,6 +164,7 @@ const search = async () => {
   searchData.value = []
   isLoading.value = true
   noResults.value = false
+  error.value = false
 
   const filter = {}
 
@@ -168,7 +176,7 @@ const search = async () => {
     filter.country = searchCountry.value
   }
 
-  const { data: { results } } = await client.post('/search', { q, filter }).finally(() => isLoading.value = false)
+  const { data: { results } } = await client.post('/search', { q, filter }).catch(() => error.value = true).finally(() => isLoading.value = false)
 
   searchData.value = results
   noResults.value = !results.length
@@ -184,9 +192,10 @@ const smartSearch = async () => {
   smartSearchData.value = []
   isLoading.value = true
   noResults.value = false
+  error.value = false
 
   const filter = { type: smartSearchType.value }
-  const { data: { results } } = await client.post('/smart-search', { q, filter }).finally(() => isLoading.value = false)
+  const { data: { results } } = await client.post('/smart-search', { q, filter }).catch(() => error.value = true).finally(() => isLoading.value = false)
 
   smartSearchData.value = results
   noResults.value = !results.length
